@@ -1,0 +1,70 @@
+;Subrutina Comp
+;Recibe 2 imagenes, las compara, y devuelve el valor absoluto
+;del resultado por el registro r29
+
+Comp:     PUSH(r1)            ;guarda la direccion de retorno
+	
+				  or r29, r0, r0      ;incializamos el contador a 0; valor de retorno(r29)
+				  xor r27, r0, r0     ;registro auxiliar para las operaciones
+				  or r15, r0, r0      ;desplazamiento
+								
+				  ld r2, r30, 4       ;cargamos la direccion de Imagen1
+				  ld r3, r30, 8       ;cargamos la direccion de Imagen2
+
+          ld r4, r2, r0       ;cargamos las fila M
+          ld r5, r3, 4        ;cargamos las columnas N
+                        				
+				  mulu r6, r4, r5		  ;multiplicacion sin signo, calculo del numero de elementos de la matriz
+									
+				  addu r2, r2, 8	    ;ubicacion del primer elemento de Imagen1
+		      addu r3, r3, 8	    ;ubicacion del primer elemento de Imagen2
+				
+                              ;Vamos a leer datos del sistema de memoria
+
+ bucle:   cmp r28, r6, r0     ;comparamos el contador con el tamaño de MxN 
+				  bb1 eq, r28, salir
+                              ;obtenemos el primer elemento de la imagen1 y el primer elemento
+                              ;de la imagen2
+                              ;continuara hasta que llegue a 0 es decir decrementara en cada
+                              ;iteracion una unidad de la imagen1 y de la imagen2
+                                
+          ld.bu r14, r2, r15	;obtenemos el primer elemento de Imagen1
+				  ld.bu r11, r3, r15	;obtenemos el primer elemento de Imagen2
+					        
+                              ;preguntamos por los elementos de la matriz	si el elmento de la
+                              ;imagen1 es igual al elemento de la imagen2, operamos
+				  cmp r27, r14, r11 
+				  bb1 eq, r27, sonIguales
+                                
+				                      ;preguntamos si el elemento de la image1 es menor 
+				                      ;que elemento de la imagen2
+				  cmp r16, r14, r11 
+				  bb1 lt, r16, saltoMenor
+				
+				                      ;sino ejecutamos
+	        subu r27, r14, r11  ;efectua la resta			
+				  addu r29, r29, r27	;incrementamos el acumulador 
+				  addu r2, r2, 1      ;avanzamos a la siguiente posicion de Imagen1
+			    addu r3, r3, 1	    ;avanzamos a la siguiente posicion de Imagen2 posicion			       
+				  subu r6, r6, 1      ;decrementamos el tamaño MxN en una unidad				   
+				  br bucle            ;provocamos el salto incondicional
+				
+				                      ;preguntamos si el elemento de la imagen1 es menor
+				                      ;que elemento de la imagen2
+				
+saltoMenor:subu r27, r11, r14 ;efectuamos la resta invirtiendo el orden de los registros
+				  addu r29, r29, r27 	;incrementamos el acumulador
+				  addu r2, r2, 1	    ;avanzamos a la siguiente posicion de Imagen1	
+				  addu r3, r3, 1      ;avanzamos a la siguiente posicion de Imagen2
+				  subu r6, r6, 1      ;decrementamos el tamaño MxN en una unidad	
+				  br bucle            ;provocamos el salto incondicional
+	
+sonIguales:subu r27, r14, r11 ;efectuamos la resta
+				  addu r29, r29, r27  ;incrementoamos el acumulador
+				  addu r2, r2, 1	    ;avanzamos a la siguiente posicion de Imagen1	
+				  addu r3, r3, 1	    ;avanzamos a la siguiente posicion de Imagen2
+				  subu r6, r6, 1      ;decrementamos el tamaño MxN en una unidad
+				  br bucle            ;provocamos el salto incondicional
+          
+	salir:	POP(r1)
+				  jmp(r1)
