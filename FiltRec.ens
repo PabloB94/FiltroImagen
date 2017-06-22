@@ -1,0 +1,119 @@
+FiltRec: PUSH(r1)     ; ;guardmaos la direccion de retorno
+           
+	 PUSH (r31)
+		xor r31, r30, r0
+	
+	
+		ld r5, r31, 8 			;Imagen
+		ld r6, r5, r0			;filas M
+		ld r7, r5, 4			;columas N
+		mulu r8, r6, r7			; MxN
+ 
+		ld r9, r31, 12 			;Cargamos MFiltro
+		ld r10, r31, 16 		;Cargamos NCambios
+		ld r13, r31, 20			;Cargamos NFiltrados
+		
+		addu r14, r8, 3			;Rellenamos la ultima palabra de ImFiltrada
+		addu r14, r14, 8		;Aumentamos el tama�o de ImFiltrada 
+		;para meter M y N
+		clr r14, r14, 2<0> 		;Alineamiento a palabra (limpia los 2 ultimos bits
+								;binarios para forzar que r14 sea multiplo de 4)
+ 
+	
+		subu r30, r30, r14		;Reservamos memoria para ImFiltrada
+		
+		xor r4, r30, r0			;Guardamos la direccion de ImFiltrada
+		;r0						
+		;r0 ahora pongo r30 --xor r4, r30, r0
+ 
+ 
+		PUSH(r14)			;Preservamos el tama�o de ImFiltrada
+		PUSH(r10)			;Preservamos NCambios en la pila
+		PUSH(r13)			;Preservamos NFiltrados en la pila
+		
+		;Empezamos a meter los par�metros para Filtro
+		
+		PUSH(r9)		    ;Metemos en la pila la direcci�n de MFiltro
+		PUSH(r4)			;Metemos en la pila la direcci�n de ImFiltrada, r4 en vez de r31
+		PUSH(r5)			;Metemos en la pila la direcci�n de Imagen
+		
+		bsr Filtro			;Llamamos a la subrutina filtro
+		
+		POP(r5)			;Recuperamos todo lo que hab�amos 
+		POP(r4)				;metido en la pila			 
+		POP(r9)			
+		POP(r13)			 
+		POP(r10)			
+    	POP(r14)			
+                        		
+		addu r13, r13, 1		;Aumentamos en 1 el contador NFiltrados
+        cmp r12, r13, 10		;Comprobamos si NFiltrados es igual que 10
+		bb1 ge, r12, exit		;Si es >= 10, que es el maximo, vamos a la salida
+ 
+		;Preservamos en la pila todos los registros en uso		
+		
+		PUSH(r9) 		;Metemos en la pila la direcci�n de MFiltro	
+		PUSH(r14)
+		PUSH(r10)
+		PUSH(r13)
+		PUSH(r30)
+		PUSH(r4)			;Pasamos a Comp la direccion de ImFiltrada
+		PUSH(r5)			;Pasamos a Comp la direccion de Imagen
+		bsr Comp			;Llamamos a la subrutina Comp
+		
+		;Recuperamos todos los registros
+		POP(r5)			
+		POP(r4)
+		POP(r30)
+		POP(r13)
+		POP(r10)
+		POP(r14)
+		POP(r9)
+			
+		;Si el valor devuelto por Comp es menor que el especificado por el parametro NCambios,
+		;se dara por terminado el proceso recursivo,
+		
+		cmp r12, r29, r10
+        bb1 lt, r12, exit
+		;fin paso 4
+ 
+		;parametros para llamar a la subrutina FiltRec
+		
+		PUSH(r13)			;NFiltrados
+		PUSH(r10)			;NCambios
+		PUSH(r9) 			;MFiltro
+		PUSH(r4)  			;ImFiltrada
+		
+		bsr FiltRec
+		
+		;POP(r4)
+		;POP(r9)
+		;POP(r10)
+		;POP(r13)
+		;Al retornar de esta llamada recursiva, la ejecucion
+		;continuara por el paso 6
+ 
+    exit:or r29, r13, r0			;Guardamos en r29 el numero de filtrados
+		
+		;Copiara la imagen filtrada ImFiltrada (la que ha quedado en el marco de pila) sobre
+		;la zona que ocupaba la imagen original, es decir, la zona determinada por el primer
+		;parametro Imagen
+		add r5, r5, r14
+		
+		or r20, r0, 8 
+		;r4 referencia a ImFiltrada
+buclefr:ld.bu r22, r4, r20
+		st.b r5, r22, r0
+		subu r5, r5, 4
+		addu r20, r20, 1
+		cmp r12, r20, r14
+		bb1 lt, r12, buclefr	;lt r20 < r14
+		;fin paso 6
+ 
+		or r29, r13, r13  ;AGREGADO 20-06-2017
+		or r30, r31, r31
+		POP(r31)			;Restauramos el puntero del marco de pila
+		POP(r1)			;Recuperamos la direccion de retorno
+		jmp(r1)		
+	
+          	
