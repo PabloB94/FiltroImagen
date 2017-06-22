@@ -1,0 +1,51 @@
+FilPixel :          PUSH (r1)
+                    PUSH (r31)
+                    or r31, r30, r30     ; inicializamos Marco Pila
+                    
+                    ld r2, r31, 8    ; cargamos la direccion de Imagen
+                    
+                    ld r3, r31, 12    ; cargamos el valor de i
+                    ld r4, r31, 16    ; cargamos el valor de j
+                    
+                    ;ld r5, r31, 20    ; cargamos la direccion de Mfiltro
+                    
+                    subu r30, r30, 12    ; reservamos espacio  para la matriz de 3X3
+                    
+                    xor r25, r30, r0    ; guradamos la referencial al puntero de pila
+										;antes era r30 en vez de r0
+
+                    PUSH (r4)         ;
+                    PUSH (r3)		;
+                    PUSH (r25)		;
+                    PUSH (r2)	    ;
+                    
+                    ;llamada a subMatriz
+                    bsr SubMatriz
+                   
+                    POP (r2)
+                    POP (r25)
+                    POP (r3)
+                    POP (r4)
+                    
+                    or r21, r30, r0   ;referencia la puntero de pila
+									   ;referencia al espacio reservado
+                    ld r5, r31, 20  ;cargamos la direccion de MFiltro 
+                    
+
+                    PUSH (r5)
+                    PUSH (r21)
+                    
+                    bsr ValorPixel
+                    
+                    POP(r21)
+                    POP (r5)
+                     
+                  prr:  xor r9, r0, r0
+                     or r29, r29, r0;
+                                 
+                     ;restauramos el puntero de pila al valor del puntero de marco
+                    or r30,r31,r31
+	            
+	            POP (r31)
+		    POP (r1)
+		    jmp (r1)
