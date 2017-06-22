@@ -1,0 +1,88 @@
+ ValorPixel:     PUSH(r1)	      ;guarda la direccion de retorno   ;2instru--->tot=16
+                               
+                    or r29, r0, r0        ;inciializamos el valor de retorno sin signo(r29)
+                                
+                    or r15, r0, r0        ;acumuldor ininicialmente esta 0
+                                
+                    or r12, r0, r0        ;desplazamiento MFiltro
+                    or r13, r0, r0        ;desplazamiento SubImg 
+                                
+                    ld r2, r30, 4         ;cargamos la direccion de SubImg
+				    ld r3, r30, 8         ;cargamos la direccion de MFiltro
+                                       
+                    ld r4, r3, r0         ;cargamos la constante K  
+                                
+                    cmp r25, r4, r0
+                    bb1 eq, r25, saltoCero
+                                
+                                
+                                                         
+          retorno:  addu r2, r2, 0	      ;ubicacion del primer elemento de SubImg
+		         	addu r3, r3, 4	      ;ubicacion del primer elemento de MFiltro
+		         	
+		         	add r7, r0, 9         ;tama�o para recorrer el bucle------->14
+		         	or r9, r0, r0         ;limpio
+		         	
+		     bucle: cmp r25, r7, r0       ;comparamos el tama�o
+		            bb1 eq, r25, preResultado
+		                
+		            ;cargamos los datos de SubImagen y MFiltro          
+		            ld.bu r8, r2, r13     ;cargamos el primer elemento de SubImagen, .bu un byte sin signo
+		                                   ;representado como un entero positivo de 32 bits positiv                          
+		            ld r9, r3, r12     ;cargamos el primer elemento de MFiltro
+		            
+					;CAMBIO ld.bu r9, r3, r12 por   ld    
+		            ;****************************************************************************
+		                
+		            ;multiplicamos los elementos de cada matriz
+		                
+		            mulu r21, r8, r9        ;producto del primer elemento de SubImagen y MFiltro
+		               
+		            addu r15, r15, r21      ;acumulamos el resultado
+		                
+		            addu r13, r13, 1      ;avanzamo al siguiente posicion de SubImg
+		                
+		            addu r12, r12, 4       ;avanzamo al siguiente posicion de MFiltro ;porque el desplazamiento por 4;ojo
+		                
+		            subu r7, r7, 1          ;decrementamos el tama�o
+		                
+		            br bucle ;-->106
+		                
+		                
+	 preResultado:  divs  r15, r15, r4   ;dividimos el resultado y almacenamos en r29   
+		            br comparaResultado              
+		
+	      saltoCero: addu r4, r4, 1  
+	                ;br retorno              
+		               
+		            ;****************************************************************************
+		            ;se sustituye por el maximo nivel de intensidad
+		            ;add suma con signo
+    resultadoFinal: addu r29, r0, 255
+		            br salirVP  
+		                         
+		                
+		            ;****************************************************************************
+                    ;si la comparacion de r26 es menor que cero saltamos
+  comparaResultado: cmp r26, r15, r0
+		            bb1 lt, r26, menorQueCero
+		                
+		                
+		            ;ejecuto porque es mayor que cero
+		            ;si es positivo y superior a 255 se sustituira por este nivel maximo
+	                cmp r24, r15, 255
+		            bb1 gt, r24, resultadoFinal
+                       ;br salirVP		                
+
+		            addu r29, r29, r15
+		            br salirVP
+		                
+		            ;reemplazamos el valor por cero                         
+      menorQueCero: addu r29, r29, r0
+		            br salirVP   
+		                         
+		                 
+		                   
+		   salirVP: POP(r1)
+		            jmp(r1)
+					
