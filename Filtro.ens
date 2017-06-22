@@ -1,0 +1,68 @@
+Filtro:   PUSH(r1)     ;guardmaos la direccion de retorno
+                 
+                 PUSH(r31)   ;guardamos el puntero al marco de pila del llamante
+                    
+                or r31, r30, r30 ;se crea el nuevo marco de pila a partir del sp(r30)
+                ld r2, r31, 8  ;cargamos la direccion de Imagen 
+                
+                ld r6, r2, r0 ;cargamos la direccion Fila M
+                ld r3, r2, 4   ;cargamos la direccioncolumna N
+        
+				ld r5, r31, 12  ;direccion de ImFiltrada
+        
+				st r6, r5, r0   ;escribimos el contenido en registro destino(fila M) 
+                st r3, r5, 4      ;escribimos el contenido en registro destino(columnan N
+                
+                addu r5, r5, 8    ;nos ubicamos en el primer elemento de ImFiltrada
+
+                or r10, r0, r0; i=0
+                or r11, r0, r0; j=0
+                ld r9, r31, 16; MFiltro
+
+
+        
+   bucleFiltr: 
+                PUSH(r6)
+                PUSH(r3)
+                PUSH(r5)     ; ingresamos ImF
+                PUSH(r9)     ; ingresamos  MFiltro
+                PUSH(r11)     ; j
+                PUSH(r10)     ; i
+                PUSH(r2)     ; ingresamos  Imagen
+                
+                ;llamamos a FilPixel
+                bsr FilPixel  
+                
+                POP(r2)
+                POP(r10)
+                POP(r11)
+                POP(r9)
+                POP(r5)
+                POP(r3)
+                POP(r6)
+                
+                ;valor de retorno de FilPixel
+                or r29,r29,r0;     
+                
+                st.b r29, r5, r0; 
+                addu r5, r5, 1;  
+                addu r11, r11, 1;  
+
+                xor r27, r0, r0
+                
+                cmp r27, r11, r3 ; 
+                bb1 eq, r27, saltoFiltr 
+                br bucleFiltr
+
+                xor r13, r0, r0
+   saltoFiltr: or r11, r0, r0; ;r11=j
+               addu r10, r10, 1; ;r10=i
+               cmp r13, r10, r6;
+               bb1 eq, r13, finFiltr
+               br bucleFiltr
+
+    finFiltr: or r30, r31, r31
+                POP(r31)
+                POP(r1)
+                jmp(r1)
+
