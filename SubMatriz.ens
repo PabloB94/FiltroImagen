@@ -1,0 +1,181 @@
+SubMatriz:      PUSH(r1)                ;guardamos la direccion de retorno
+                                
+                                
+                                xor r28, r0, r0         ;contador para para los 9 elementos de SubImg
+                                
+                                and r19, r0, r0         ;registro auxiliar para las operaciones
+                                addu r19, r0, 9         ;tamaño de la matriz resultado((subImg))
+                                
+                                ld r2, r30, 4   ;--------->;cargamos la direccion de Imagen
+                               
+                                ld r4, r2, r0           ;cargamos en r4 el numero de filas de Imagen(M)
+                                ld r5, r2, 4            ;cargamos en r5 el numero de columasn de Imagen(N)
+                                
+                                mulu r6, r4, r5         ;tamaño de la matriz de entrada(Imagen) 
+                                
+                                
+                                ld r3, r30, 8 ;----------> ;cargamos la direccion de SubImg
+                                       
+                                ld r8, r30, 12          ;cargamos el valor de i(parametro de entrada por valor)
+                                ld r9, r30, 16          ;cargamos el valor de j(parametro de entrada por valor)
+                            
+                                
+                                
+                                subu r4, r4, 1         ;i es el numero de filas entre 0 y M-1
+                                subu r5, r5, 1         ;j es el numero de columnas entre 0 y N-1
+                                ;mulu r15, r13, r14      ;tamaño de la matriz resultado "SubImg"(M-1)(N-1)
+                                
+                               ;*********************************************************************************
+                                
+                               ;El pixel I(i,j) pertenecera al borde en la cualquiera de los casos:
+                               ;si (r8)= i = 0;  i = M-1,  (r9)= j = 0; j = N-1
+                               
+                               ;comparamos el primer caso: i = 0
+                               ;;reemplasamos r8 por r13=i= 0 / M-1
+                               cmp r20, r8, r0
+                               bb1 eq, r20, borde
+                               ;si es igual acero esta en el borde de la matriz
+                               
+                               
+                               ;comparamos el tercer caso: j = 0
+                               cmp r23, r9, r0
+                               bb1 eq, r23, borde
+                               ;si es igual a cero esta en el borde de la matriz
+                               
+                               
+                               ;comopararmos el segundo caso: i = M-1
+                               cmp r21, r8, r4
+                               bb1 eq, r21, borde
+                               ;si es igual a cero esta en el borde de la matriz
+                               
+                               
+                               ;comparamos el cuarto caso: j = N-1
+                               cmp r24, r9, r5
+                               bb1 eq, r24, borde
+                               ;si es igual a cero esta en el borde de la matriz 
+                              
+                               add r2, r2, 8
+                               ;*********************************************************************************
+                               ;*********************************************************************************
+                               ;si no esta en el borde seguimos ejecutamos
+                               ;"KEEP GOING"
+                               
+                               ;SubImg es la matriz de 3x3
+                               ;creamos los contadores
+                               or r10, r0, r0
+                               addu r16, r10, 3          ;contador de elementos en filas
+                               addu r17, r10, 3          ;contador de elementos en columnas
+                               
+                               
+                               ;obtenemos (i-1)  y  (j-1)
+                               subu r8, r8, 1           ;(i-1)
+                               subu r9, r9, 1           ;(j-1)
+                               
+                               ;cargamos N
+                               
+                               or r10, r0, r0
+                               addu r10, r5, r0     ;cargamos N
+                               addu r10, r10, 1
+                               mulu r11, r8, r10       ;(i -1) * N
+                               addu r12, r11, r9        ;[(i -1) * N] + (j-1) 
+                               addu r15, r2, r0          ;nos ubicamos en el primer elemento de Imagen 
+                               addu r15, r15, r12       ;aputamos al elemento de imagen
+                               
+                               
+                  ;bucleColumna: xor r20, r15, r0        ;copia del puntero      
+                   ;bucleColumna: ld.bu r16, r15, r0
+                                 ;st.b r3, r3, r0;       ;almacenamos en subImg
+                                 ;addu r15, r15, 1       ;desplazamos a la siguiente posicion de Imagen
+                                 ;addu r20, r20, 1       ;un elmento en la columna
+                                      
+                                xor r25, r0, r0
+                                xor r26, r0, r0
+                                subu r26, r5, 2         ;#columnas -2
+                                 
+                                         
+                                      
+                               
+                     bucleFila: ld.bu r21, r15, r0       ;cargamos el elmento pixel a copiar de Imagen a SubImg   
+                                st.b r21, r3, r0        ;indica que se tranfiere un byte(.b),almacenamos en subImg
+                                                         ;escribe en el registro destino correspondiente
+                                      
+                                addu r15, r15, 1        ;desplazamiento a la siguiente posicion(copia del puntero) 
+                                                        ;desplazamos a la siguiente posicion de Imagen
+                                
+                                addu r3, r3, 1          ;desplazamiento de SubImagen 
+                                
+                                addu r28, r28, 1        ;incrementamos contadro 
+                                ;subu r17, r17, 1        ;decrementamos el numero de columnas en subImg
+                                ;subu r6, r6, 1          ;decrementamos la cantindad de elementos(tamaño) en 1 
+                                ;addu r20, r20, 1        ;1 elemento en la columna
+                                ;cmp r7, r17, 0         ;comparamos hasta llegar a tres
+                                ;bb1 eq, r7, bucleFila
+                                
+                                cmp r20, r28, r19       ;comparamos el total de elementos almacenados con el 
+                                                        ;valor 9, se retorna una matriz de 3x3
+                                                        
+                                bb1 eq, r20, finSM
+                                 
+                                 cmp r25, r28, 3
+                                 bb1 eq, r25, salto
+                                 
+                                 cmp r25, r28, 6
+                                 bb1 eq, r25, salto
+                               
+                                
+                                br bucleFila
+                          
+                          salto: addu r15, r15, r26
+                                 ;addu r15, r15, 1
+                                 
+                                br bucleFila
+                                
+                                
+                                
+                                ;bucleFila: addu r3, r3, r5         ;nos desplazamos a la siguiente fila de subImg
+                                ;subu r16, r16, 1        ;decrementamos el contador de filas
+                                
+                                ;cmp r7, r16, r0
+                                ;bb1 eq, r7, finSM
+                                ;br bucleColumna
+                                
+                                
+                     
+                               
+                               ;*********************************************************************************
+                               ;-------------------------------------------------------------------------------- 
+                                ;Por acumulacion por filas 
+                                
+                         borde: add r5, r5, 1
+                                
+                                
+                                or r10, r0, r0
+                                mulu r10, r8, r5        ;i x N
+                        er:     addu r11, r10, r9       ;(i x N) + j
+                                add r11, r11, 8
+                                xor r12, r0, r0
+                                xor r13, r0, r0
+                                ;addu r12, r2, r11       ;apuntamos a la posicion i,j
+                    bucleBorde: ld.bu r12, r2, r11      ;cargamos la posicion (i,j)
+                               
+                                st.b r12, r3, r0        ;se almacena en subImg
+                                
+                                addu r28, r28, 1        ;sumamos el contador
+                                addu r3, r3, 1          ;desplazamiento a la siguiente posicion de subImg
+                                ;comparamos
+                                cmp r20, r28, r19       ;comparamos el total de elementos almacenados con el 
+                                                        ;valor 9, se retorna una matriz de 3x3
+                                                        
+                                bb1 eq, r20, finSM
+                                br bucleBorde
+                                
+                               
+                                
+                                
+                                
+                        
+                                 
+                         finSM: POP(r1)
+				jmp(r1)
+                                 
+                                 
