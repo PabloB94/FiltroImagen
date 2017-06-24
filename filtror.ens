@@ -1,0 +1,961 @@
+;Creacion de las Macros
+;----------------------------------------------------------------------------------------------
+
+;Carga el registro ra con la direccion efectiva definida por la etiqueta "etiqueta"
+
+	LEA:	MACRO(ra, etiqueta)
+			or ra, r0, low(etiqueta)
+			or.u ra, ra, high(etiqueta)
+	ENDMACRO
+	
+	
+;Carga en el registro ra el contenido de la etiqueta "etiqueta"
+
+	LOAD:	MACRO(ra, etiqueta)
+			LEA(ra, etiqueta)
+			ld ra, ra, 0
+			
+	ENDMACRO
+	
+
+;Decrementa el registro ra y salta a la etiqueta "etiqueta" si no es cero el resultado
+;utilizando r5 como registro auxiliar
+
+	DBNZ:	MACRO(ra, etiqueta)
+			sub ra, ra, 1
+			cmp r5, ra, 0
+			bb0 4, r5, etiqueta
+			
+	ENDMACRO	
+	
+	
+	AVANZAR:	MACRO(ra, etiqueta)
+				subu ra, ra, 1
+				cmp r28, ra, r0 
+				bb0 eq, ra, etiqueta
+				
+	ENDMACRO
+	
+	
+	
+	
+PUSH:	MACRO(ra)
+		sub r30, r30, 4
+		st ra, r30, 0
+		
+		ENDMACRO
+		
+		
+POP:	MACRO(ra)
+		ld ra, r30, 0
+		add r30, r30, 4
+		
+		ENDMACRO
+	
+	
+bsr PPA
+;==========================================================================================================================================
+
+
+;org 36848	
+;data 0x00008000, 0x00008030, 0x00000002, 0x00000000
+
+;org 32768
+;data 0x00000004, 0x00000008, 0xFF00FF00, 0x00FF00FF
+
+;org 32784
+;data 0xFF00FF00, 0x00FF00FF, 0xFF00FF00, 0x00FF00FF;
+
+;org 32800
+;data 0xFF00FF00, 0x00FF00FF
+
+;org 32816
+;data 0x00000008, 0x00000001, 0x00000001, 0x00000001
+
+;org 32832
+;data 0x00000001, 0x00000000, 0x00000001, 0x00000001
+
+;org 32848	
+;data 0x00000001, 0x00000001
+
+;=================================================================================
+
+;org 36848
+;data 0x00008000, 0x00008030, 0x00000000, 0x00000000
+
+;org 32768
+;data 0x00000004, 0x00000008, 0xFF0000FF, 0xFF0000FF
+
+;org 32784
+;data 0xFF0000FF, 0xFF0000FF, 0xFF0000FF, 0xFF0000FF
+
+;org 32800
+;data 0xFF0000FF, 0xFF0000FF
+
+;org 32816
+;data 0x00000008, 0x00000001, 0x00000001, 0x00000001
+
+;org 32832
+;data 0x00000001, 0x00000000, 0x00000001, 0x00000001
+
+;org 32848
+;data 0x00000001, 0x00000001
+
+;=================================================================================
+;org 36848 
+;data 0x00008000, 0x00008030, 0x00000001, 0x00000000 
+
+;org 32768 
+;data 0x00000004, 0x00000008, 0xFF0000FF, 0xFF0000FF 
+
+;org 32784 
+;data 0xFF0000FF, 0xFF0000FF, 0xFF0000FF, 0xFF0000FF 
+
+;org 32800 
+;data 0xFF0000FF, 0xFF0000FF
+
+;org 32816 
+;data 0x00000004, 0x00000001, 0x00000000, 0x00000001
+
+;org 32832 
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000001
+
+;org 32848
+;data 0x00000000, 0x00000001 
+
+;---------------------------------------------------------------------------------------------------------		
+;Programa principal
+PPA: 	LEA(r30, 36848)
+                       
+		
+		
+		bsr FiltRec
+	        stop
+				
+
+FiltRec:PUSH(r1)     ; ;guardmaos la direccion de retorno
+           
+		PUSH (r31)
+		or r31, r30, r0
+	
+	
+		ld r5, r31, 8 			;Cargamos Imagen
+		ld r9, r31, 12 			;Cargamos MFiltro
+		ld r10, r31, 16 		;Cargamos NCambios
+		ld r13, r31, 20			;Cargamos NFiltrados
+		
+		ld r6, r5, r0			;Extraemos el numero de filas M
+		ld r7, r5, 4			;Extraemos el numero de columas N
+		mulu r8, r6, r7			;Calculamos el numero de elementos MxN
+ 
+	
+		addu r14, r8, 3			;Rellenamos la ultima palabra de ImFiltrada
+		addu r14, r14, 8		;Aumentamos el tamaño de ImFiltrada para meter M y N
+		clr r14, r14, 2<0> 		;Alineamiento a palabra (limpia los 2 ultimos bits
+								;binarios para forzar que r14 sea multiplo de 4)
+ 
+	
+		subu r30, r30, r14		;Reservamos memoria para ImFiltrada
+		
+		or r4, r30, r0			;Guardamos la direccion de ImFiltrada
+		
+		PUSH(r10)			;Preservamos NCambios en la pila
+		PUSH(r13)			;Preservamos NFiltrados en la pila
+		
+		;Empezamos a meter los parámetros para Filtro	
+		PUSH(r9)		    ;Metemos en la pila la dirección de MFiltro
+		PUSH(r4)			;Metemos en la pila la dirección de ImFiltrada
+		PUSH(r5)			;Metemos en la pila la dirección de Imagen
+		
+		bsr Filtro			;Llamamos a la subrutina filtro
+		
+		POP(r5)				;Recuperamos todo lo que habíamos 
+		POP(r4)				;metido en la pila			 
+		POP(r9)			
+		POP(r13)			 
+		POP(r10)						
+                        		
+		addu r13, r13, 1		;Aumentamos en 1 el contador NFiltrados
+        cmp r12, r13, 10		;Comprobamos si NFiltrados es igual que 10
+		bb1 ge, r12, exit		;Si es >= 10, que es el maximo, vamos a la salida
+ 
+		;Preservamos en la pila todos los registros en uso		
+		
+		PUSH(r9) 		;Metemos en la pila la dirección de MFiltro	
+		PUSH(r10)
+		PUSH(r13)
+		PUSH(r4)			;Pasamos a Comp la direccion de ImFiltrada
+		PUSH(r5)			;Pasamos a Comp la direccion de Imagen
+		
+		bsr Comp			;Llamamos a la subrutina Comp
+		
+		;Recuperamos todos los registros
+		POP(r5)			
+		POP(r4)
+		POP(r13)
+		POP(r10)
+		POP(r9)
+			
+		;Si el valor devuelto por Comp es menor que el especificado por el parametro NCambios,
+		;se dara por terminado el proceso recursivo,
+		
+		cmp r12, r29, r10
+        bb1 lt, r12, exit
+		;fin paso 4
+ 
+		;parametros para llamar a la subrutina FiltRec
+		
+		PUSH(r5)			;Imagen original
+		PUSH(r13)			;NFiltrados
+		PUSH(r10)			;NCambios
+		PUSH(r9) 			;MFiltro
+		PUSH(r4)  			;ImFiltrada
+		
+		bsr FiltRec
+		
+		POP(r4)
+		POP(r9)
+		POP(r10)
+		POP(r25)			;No nos interesa recuperar el valor anterior de NFiltrados
+		POP(r5)
+		;Al retornar de esta llamada recursiva, la ejecucion
+		;continuara por el paso 6
+ 
+    exit:or r29, r13, r0			;Guardamos en r29 el numero de filtrados
+		
+		;Copiara la imagen filtrada ImFiltrada (la que ha quedado en el marco de pila) sobre
+		;la zona que ocupaba la imagen original, es decir, la zona determinada por el primer
+		;parametro Imagen
+
+		ld r6, r4, r0				;Obtenemos M
+		ld r7, r4, 4				;Obtenemos N
+		
+		mulu r8, r6, r7				;MxN
+		addu r8, r8, 8				;MxN mas el espacio para M y N
+		
+		or r17, r0, 8				;Contador inicializado a 8
+
+buclefr:cmp r12, r17, r8
+		bb1 eq, r12, exitFR
+		ld.bu r19, r4, r17
+		st.b r19, r5, r17
+		add r17, r17, 1
+		br buclefr
+		
+exitFR:	or r30, r31, r31	;Restauramos el SP
+		POP(r31)			;Restauramos el puntero del marco de pila
+		POP(r1)				;Recuperamos la direccion de retorno
+		jmp(r1)				
+	
+          	
+				
+				
+;----------------------------------------------------------------------------------------------
+
+;==========================================================================================================================================
+;==========================================================================================================================================
+;org 36852   
+;data 0x00008000, 0x00008028, 0x00008050
+
+;org 32768
+;data 0x00000004, 0x00000008, 0x12345678, 0x11223344
+
+;org 32784
+;data  0x12345678, 0x12233445, 0x12345678, 0x11223344
+
+;org 32800
+;data 0x12345678, 0x12233445, 0x00000000, 0x00000000
+
+;org 32816 
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000000
+
+;org 32832
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000000
+
+;org 32848
+;data 0x00000001, 0x00000000, 0x00000000, 0x00000000
+
+;org 32864
+;data 0x00000000, 0x00000002, 0x00000000, 0x00000000
+
+;org 32880
+;data 0x00000000, 0x00000000
+
+
+;====
+;org 36852   
+;data 0x00008000, 0x00008028, 0x00008050
+
+;org 32768
+;data 0x00000004, 0x00000008, 0x04030201, 0x07060504
+
+;org 32784
+;data  0x14234211, 0x17168514, 0x24232221, 0x27262574
+
+;org 32800
+;data 0x34333231, 0x37363534, 0x00000000, 0x00000000
+
+;org 32816 
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000000
+
+;org 32832
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000000
+
+;org 32848
+;data 0x00000001, 0x00000000, 0x00000000, 0x00000000
+
+;org 32864
+;data 0x00000000, 0x00000004, 0x00000000, 0x00000000
+
+;org 32880
+;data 0x00000000, 0x00000000
+
+
+
+;==
+
+
+;org 36852   
+;data 0x00008000, 0x00008028, 0x00008040
+
+;org 32768
+;data 0x00000004, 0x00000006, 0x04030201, 0x02000605
+
+;org 32784
+;data  0x05030104, 0x0C090603, 0x0804120F, 0x80402010
+
+;org 32800
+;data 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5
+
+;org 32816 
+;data 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5, 0xA5A5A5A5
+
+;org 32832
+;data 0x00000004, 0x00000001, 0x00000000, 0x00000001
+
+;org 32848
+;data 0x00000000, 0x00000000, 0x00000000, 0x00000001
+
+;org 32864
+;data 0x00000000, 0x00000001
+
+
+      
+;Programa principal
+;PPA: 	LEA(r30, 36852)
+                       
+		
+		
+		;bsr Filtro
+	    ;stop
+
+	    	
+	
+	
+	
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++	
+;+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+;=
+           
+             
+             
+
+       Filtro:   PUSH(r1)     ;guardmaos la direccion de retorno
+                 
+                 PUSH(r31)   ;guardamos el puntero al marco de pila del llamante
+                    
+                or r31, r30, r30 ;se crea el nuevo marco de pila a partir del sp(r30)
+                ld r2, r31, 8  ;cargamos la direccion de Imagen 
+                
+                ld r6, r2, r0 ;cargamos la direccion Fila M
+                ld r3, r2, 4   ;cargamos la direccioncolumna N
+        
+				ld r5, r31, 12  ;direccion de ImFiltrada
+        
+				st r6, r5, r0   ;escribimos el contenido en registro destino(fila M) 
+                st r3, r5, 4      ;escribimos el contenido en registro destino(columnan N
+                
+                addu r5, r5, 8    ;nos ubicamos en el primer elemento de ImFiltrada
+
+                or r10, r0, r0; i=0
+                or r11, r0, r0; j=0
+                ld r9, r31, 16; MFiltro
+
+
+        
+   bucleFiltr: 
+                PUSH(r6)
+                PUSH(r3)
+                PUSH(r5)     ; ingresamos ImF
+                PUSH(r9)     ; ingresamos  MFiltro
+                PUSH(r11)     ; j
+                PUSH(r10)     ; i
+                PUSH(r2)     ; ingresamos  Imagen
+                
+                ;llamamos a FilPixel
+                bsr FilPixel  
+                
+                POP(r2)
+                POP(r10)
+                POP(r11)
+                POP(r9)
+                POP(r5)
+                POP(r3)
+                POP(r6)
+                
+                ;valor de retorno de FilPixel
+                or r29,r29,r0;     
+                
+                st.b r29, r5, r0; 
+                addu r5, r5, 1;  
+                addu r11, r11, 1;  
+
+                xor r27, r0, r0
+                
+                cmp r27, r11, r3 ; 
+                bb1 eq, r27, saltoFiltr 
+                br bucleFiltr
+
+                xor r13, r0, r0
+   saltoFiltr: or r11, r0, r0; ;r11=j
+               addu r10, r10, 1; ;r10=i
+               cmp r13, r10, r6;
+               bb1 eq, r13, finFiltr
+               br bucleFiltr
+
+    finFiltr: or r30, r31, r31
+                POP(r31)
+                POP(r1)
+                jmp(r1)
+
+
+                 
+ 
+                         
+  ;=========================================================================================================                      
+  ;========================================================================================================= 
+                         
+           
+  ;=====================================================================================================
+
+;org 36848
+;data 0x00008000, 0x00000001, 0x00000001,  0x000008030
+
+;org 32768
+;data 0x00000004, 0x00000008, 0x00000000, 0x00000000
+
+;org 32784
+;data 0x00003300, 0x00000000, 0x00000000, 0x00000000
+
+;org 32800
+;data 0x00000000, 0x00000000
+
+;org 32816
+;data 0x00000001, 0x00000000, 0x00000000, 0x00000001
+
+;org 32832
+;data 0x00000000, 0x00000001, 0x00000000, 0x00000000    
+ 
+;org 32848
+;data 0x00000000, 0x00000000
+
+
+
+;========
+
+;org 36848
+;data 0x00008000, 0x00000002, 0x00000002,  0x000008030
+
+;org 32768
+;data 0x00000004, 0x00000008, 0x44444444, 0x44444444
+
+;org 32784
+;data 0x33343544, 0x44444444, 0x44884444, 0x44444444
+
+;org 32800
+;data 0x44444444, 0x44444444
+
+;org 32816
+;data 0x00000008, 0x00000001, 0x00000001, 0x00000001
+
+;org 32832
+;data 0x00000001, 0x00000000, 0x00000001, 0x00000001    
+ 
+;org 32848
+;data 0x00000001, 0x00000001
+
+
+;//////////////////////////
+ ;org 36848
+;data 0x00008000, 0x00000002, 0x00000002,  0x000008030
+
+;org 32768
+;data 0x00000004, 0x00000008, 0x40414243, 0x44454647
+
+;org 32784
+;data 0x48494A4B, 0x4C4D4E4F, 0x40414243, 0x44454647
+
+;org 32800
+;data 0x48494A4B, 0x4C4D4E4F
+
+;org 32808
+;data 0x00000001, 0x00000001
+
+;org 32816
+;data  0x00000000, 0xFFFFFFFF, 0x00000001, 0x00000000
+
+;org 32832
+;data 0xFFFFFFFF, 0x00000001, 0x00000000, 0xFFFFFFFF   
+ 
+       
+        
+  
+
+	
+	
+;---------------------------------------------------------------------------------------------------------
+;---------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+;===========================================================================================================        
+                         
+                                        
+FilPixel :          PUSH (r1)
+                    PUSH (r31)
+                    or r31, r30, r30     ; inicializamos Marco Pila
+                    
+                    ld r2, r30, 8    ; cargamos la direccion de Imagen
+                    
+                    ld r3, r30, 12    ; cargamos el valor de i
+                    ld r4, r30, 16    ; cargamos el valor de j
+                    
+                    ;ld r5, r30, 20    ; cargamos la direccion de Mfiltro
+                    
+                    subu r30, r30, 12    ; reservamos espacio  para la matriz de 3X3
+                    
+                    xor r25, r30, r0    ; guradamos la referencial al puntero de pila
+										;antes era r30 en vez de r0
+
+                    PUSH (r4)         ;
+                    PUSH (r3)		;
+                    PUSH (r25)		;
+                    PUSH (r2)	    ;
+                    
+                    ;llamada a subMatriz
+                    bsr SubMatriz
+                   
+                    POP (r2)
+                    POP (r25)
+                    POP (r3)
+                    POP (r4)
+                    
+                    or r21, r30, r0   ;referencia la puntero de pila
+									   ;referencia al espacio reservado
+                    ld r5, r31, 20  ;cargamos la direccion de MFiltro 
+                    
+
+                    PUSH (r5)
+                    PUSH (r21)
+                    
+                    bsr ValorPixel
+                    
+                    POP(r21)
+                    POP (r5)
+                     
+                  prr:  xor r9, r0, r0
+                     or r29, r29, r0;
+                                 
+                     ;restauramos el puntero de pila al valor del puntero de marco
+                    or r30,r31,r31
+	            
+	            POP (r31)
+		    POP (r1)
+		    jmp (r1)
+
+                                        
+
+
+;===================================================================================================================================
+
+
+ SubMatriz:      PUSH(r1)                ;guardamos la direccion de retorno
+                                
+                                
+                                xor r28, r0, r0         ;contador para para los 9 elementos de SubImg
+                                
+                                and r19, r0, r0         ;registro auxiliar para las operaciones
+                                addu r19, r0, 9         ;tamaño de la matriz resultado((subImg))
+                                
+                                ld r2, r30, 4   ;--------->;cargamos la direccion de Imagen
+                               
+                                ld r4, r2, r0           ;cargamos en r4 el numero de filas de Imagen(M)
+                                ld r5, r2, 4            ;cargamos en r5 el numero de columasn de Imagen(N)
+                                
+                                mulu r6, r4, r5         ;tamaño de la matriz de entrada(Imagen) 
+                                
+                                
+                                ld r3, r30, 8 ;----------> ;cargamos la direccion de SubImg
+                                       
+                                ld r8, r30, 12          ;cargamos el valor de i(parametro de entrada por valor)
+                                ld r9, r30, 16          ;cargamos el valor de j(parametro de entrada por valor)
+                            
+                                
+                                
+                                subu r4, r4, 1         ;i es el numero de filas entre 0 y M-1
+                                subu r5, r5, 1         ;j es el numero de columnas entre 0 y N-1
+                                ;mulu r15, r13, r14      ;tamaño de la matriz resultado "SubImg"(M-1)(N-1)
+                                
+                               ;*********************************************************************************
+                                
+                               ;El pixel I(i,j) pertenecera al borde en la cualquiera de los casos:
+                               ;si (r8)= i = 0;  i = M-1,  (r9)= j = 0; j = N-1
+                               
+                               ;comparamos el primer caso: i = 0
+                               ;;reemplasamos r8 por r13=i= 0 / M-1
+                               cmp r20, r8, r0
+                               bb1 eq, r20, borde
+                               ;si es igual acero esta en el borde de la matriz
+                               
+                               
+                               ;comparamos el tercer caso: j = 0
+                               cmp r23, r9, r0
+                               bb1 eq, r23, borde
+                               ;si es igual a cero esta en el borde de la matriz
+                               
+                               
+                               ;comopararmos el segundo caso: i = M-1
+                               cmp r21, r8, r4
+                               bb1 eq, r21, borde
+                               ;si es igual a cero esta en el borde de la matriz
+                               
+                               
+                               ;comparamos el cuarto caso: j = N-1
+                               cmp r24, r9, r5
+                               bb1 eq, r24, borde
+                               ;si es igual a cero esta en el borde de la matriz 
+                              
+                               add r2, r2, 8
+                               ;*********************************************************************************
+                               ;*********************************************************************************
+                               ;si no esta en el borde seguimos ejecutamos
+                               ;"KEEP GOING"
+                               
+                               ;SubImg es la matriz de 3x3
+                               ;creamos los contadores
+                               or r10, r0, r0
+                               addu r16, r10, 3          ;contador de elementos en filas
+                               addu r17, r10, 3          ;contador de elementos en columnas
+                               
+                               
+                               ;obtenemos (i-1)  y  (j-1)
+                               subu r8, r8, 1           ;(i-1)
+                               subu r9, r9, 1           ;(j-1)
+                               
+                               ;cargamos N
+                               
+                               or r10, r0, r0
+                               addu r10, r5, r0     ;cargamos N
+                               addu r10, r10, 1
+                               mulu r11, r8, r10       ;(i -1) * N
+                               addu r12, r11, r9        ;[(i -1) * N] + (j-1) 
+                               addu r15, r2, r0          ;nos ubicamos en el primer elemento de Imagen 
+                               addu r15, r15, r12       ;aputamos al elemento de imagen
+                               
+                               
+                  ;bucleColumna: xor r20, r15, r0        ;copia del puntero      
+                   ;bucleColumna: ld.bu r16, r15, r0
+                                 ;st.b r3, r3, r0;       ;almacenamos en subImg
+                                 ;addu r15, r15, 1       ;desplazamos a la siguiente posicion de Imagen
+                                 ;addu r20, r20, 1       ;un elmento en la columna
+                                      
+                                xor r25, r0, r0
+                                xor r26, r0, r0
+                                subu r26, r5, 2         ;#columnas -2
+                                 
+                                         
+                                      
+                               
+                     bucleFila: ld.bu r21, r15, r0       ;cargamos el elmento pixel a copiar de Imagen a SubImg   
+                                st.b r21, r3, r0        ;indica que se tranfiere un byte(.b),almacenamos en subImg
+                                                         ;escribe en el registro destino correspondiente
+                                      
+                                addu r15, r15, 1        ;desplazamiento a la siguiente posicion(copia del puntero) 
+                                                        ;desplazamos a la siguiente posicion de Imagen
+                                
+                                addu r3, r3, 1          ;desplazamiento de SubImagen 
+                                
+                                addu r28, r28, 1        ;incrementamos contadro 
+                                ;subu r17, r17, 1        ;decrementamos el numero de columnas en subImg
+                                ;subu r6, r6, 1          ;decrementamos la cantindad de elementos(tamaño) en 1 
+                                ;addu r20, r20, 1        ;1 elemento en la columna
+                                ;cmp r7, r17, 0         ;comparamos hasta llegar a tres
+                                ;bb1 eq, r7, bucleFila
+                                
+                                cmp r20, r28, r19       ;comparamos el total de elementos almacenados con el 
+                                                        ;valor 9, se retorna una matriz de 3x3
+                                                        
+                                bb1 eq, r20, finSM
+                                 
+                                 cmp r25, r28, 3
+                                 bb1 eq, r25, salto
+                                 
+                                 cmp r25, r28, 6
+                                 bb1 eq, r25, salto
+                               
+                                
+                                br bucleFila
+                          
+                          salto: addu r15, r15, r26
+                                 ;addu r15, r15, 1
+                                 
+                                br bucleFila
+                                
+                                
+                                
+                                ;bucleFila: addu r3, r3, r5         ;nos desplazamos a la siguiente fila de subImg
+                                ;subu r16, r16, 1        ;decrementamos el contador de filas
+                                
+                                ;cmp r7, r16, r0
+                                ;bb1 eq, r7, finSM
+                                ;br bucleColumna
+                                
+                                
+                     
+                               
+                               ;*********************************************************************************
+                               ;-------------------------------------------------------------------------------- 
+                                ;Por acumulacion por filas 
+                                
+                         borde: add r5, r5, 1
+                                
+                                
+                                or r10, r0, r0
+                                mulu r10, r8, r5        ;i x N
+                        er:     addu r11, r10, r9       ;(i x N) + j
+                                add r11, r11, 8
+                                xor r12, r0, r0
+                                xor r13, r0, r0
+                                ;addu r12, r2, r11       ;apuntamos a la posicion i,j
+                    bucleBorde: ld.bu r12, r2, r11      ;cargamos la posicion (i,j)
+                               
+                                st.b r12, r3, r0        ;se almacena en subImg
+                                
+                                addu r28, r28, 1        ;sumamos el contador
+                                addu r3, r3, 1          ;desplazamiento a la siguiente posicion de subImg
+                                ;comparamos
+                                cmp r20, r28, r19       ;comparamos el total de elementos almacenados con el 
+                                                        ;valor 9, se retorna una matriz de 3x3
+                                                        
+                                bb1 eq, r20, finSM
+                                br bucleBorde
+                                
+                               
+                                
+                                
+                                
+                        
+                                 
+                         finSM: POP(r1)
+				jmp(r1)
+                                 
+                                 
+                                 
+  ;===============================================================================================================================
+  
+  
+  
+  ValorPixel:     PUSH(r1)	      ;guarda la direccion de retorno   ;2instru--->tot=16
+                               
+                    or r29, r0, r0        ;inciializamos el valor de retorno sin signo(r29)
+                                
+                    or r15, r0, r0        ;acumuldor ininicialmente esta 0
+                                
+                    or r12, r0, r0        ;desplazamiento MFiltro
+                    or r13, r0, r0        ;desplazamiento SubImg 
+                                
+                    ld r2, r30, 4         ;cargamos la direccion de SubImg
+				    ld r3, r30, 8         ;cargamos la direccion de MFiltro
+                                       
+                    ld r4, r3, r0         ;cargamos la constante K  
+                                
+                    cmp r25, r4, r0
+                    bb1 eq, r25, saltoCero
+                                
+                                
+                                                         
+          retorno:  addu r2, r2, 0	      ;ubicacion del primer elemento de SubImg
+		         	addu r3, r3, 4	      ;ubicacion del primer elemento de MFiltro
+		         	
+		         	add r7, r0, 9         ;tamaño para recorrer el bucle------->14
+		         	or r9, r0, r0         ;limpio
+		         	
+		     bucle: cmp r25, r7, r0       ;comparamos el tamaño
+		            bb1 eq, r25, preResultado
+		                
+		            ;cargamos los datos de SubImagen y MFiltro          
+		            ld.bu r8, r2, r13     ;cargamos el primer elemento de SubImagen, .bu un byte sin signo
+		                                   ;representado como un entero positivo de 32 bits positiv                          
+		            ld.b r9, r3, r12     ;cargamos el primer elemento de MFiltro
+		            
+					;CAMBIO ld.bu r9, r3, r12 por   ld    
+		            ;****************************************************************************
+		                
+		            ;multiplicamos los elementos de cada matriz
+		                
+		            mulu r21, r8, r9        ;producto del primer elemento de SubImagen y MFiltro
+		               
+		            addu r15, r15, r21      ;acumulamos el resultado
+		                
+		            addu r13, r13, 1      ;avanzamo al siguiente posicion de SubImg
+		                
+		            addu r12, r12, 4       ;avanzamo al siguiente posicion de MFiltro ;porque el desplazamiento por 4;ojo
+		                
+		            subu r7, r7, 1          ;decrementamos el tamaño
+		                
+		            br bucle ;-->106
+		                
+		                
+	 preResultado:  divs  r15, r15, r4   ;dividimos el resultado y almacenamos en r29   
+		            br comparaResultado              
+		
+	      saltoCero: addu r4, r4, 1  
+	                ;br retorno              
+		               
+		            ;****************************************************************************
+		            ;se sustituye por el maximo nivel de intensidad
+		            ;add suma con signo
+    resultadoFinal: addu r29, r0, 255
+		            br salirVP  
+		                         
+		                
+		            ;****************************************************************************
+                    ;si la comparacion de r26 es menor que cero saltamos
+  comparaResultado: cmp r26, r15, r0
+		            bb1 lt, r26, menorQueCero
+		                
+		                
+		            ;ejecuto porque es mayor que cero
+		            ;si es positivo y superior a 255 se sustituira por este nivel maximo
+	                cmp r24, r15, 255
+		            bb1 gt, r24, resultadoFinal
+                       ;br salirVP		                
+
+		            addu r29, r29, r15
+		            br salirVP
+		                
+		            ;reemplazamos el valor por cero                         
+      menorQueCero: addu r29, r29, r0
+		            br salirVP   
+		                         
+		                 
+		                   
+		   salirVP: POP(r1)
+		            jmp(r1)
+					
+
+        ;==================
+
+
+	            Comp: PUSH(r1)            ;guarda la direccion de retorno
+	
+							or r29, r0, r0      ;inciializamos el contador a 0; valor de retorno(r29)
+				
+                            xor r27, r0, r0     ;registro auxiliar para las operaciones
+				
+                            or r15, r0, r0     ;desplazamiento
+				
+				
+							ld r2, r30, 4       ;cargamos la direccion de Imagen1
+							ld r3, r30, 8       ;cargamos la direccion de Imagen2
+
+                            ld r4, r2, r0       ;cargamos las fila M
+                            ld r5, r3, 4        ;cargamos las columnas N
+                        				
+							mulu r6, r4, r5		;multiplicacion con signo si lo tuviera
+												;numero de elementos de la matriz
+						
+				
+							addu r2, r2, 8		;ubicacion del primer elemento de Imagen1
+							addu r3, r3, 8		;ubicacion del primer elemento de Imagen2
+				
+                             ;Vamos a leer datos del sistema de memoria
+                
+                             ;Comparamos el tamaño de la matriz MxN
+
+                       
+                  bucleCom: cmp r28, r6, r0 ;comparamos el contador con el tamaño de MxN 
+							bb1 eq, r28, salir
+
+                            ;obtenemos el primer elemento de la imagen1 y el primer elemento
+                            ;de la imagen2
+                            ;continuara hasta que llegue a 0 es decir decrementara en cada
+                            ;iteracion un unidad de la imagen1 y de la imagen2
+                                
+                            ld.bu r14, r2, r15	;obtenemos el primer elemento de Imagen1
+							ld.bu r11, r3, r15	;obtenemos el primer elemento de Imagen2
+					        
+                            ;preguntamos por los elementos de la matriz					
+							;****************************************************************************
+
+                            ;si el elmento de la imagen1 es igual al elemento de la imagen2
+							;operamos
+							cmp r27, r14, r11 
+							bb1 eq, r27, sonIguales
+
+
+
+                            ;****************************************************************************
+							;preguntamos si el elemento de la image1 es menor 
+							;que elemento de la imagen2
+							cmp r16, r14, r11 
+							bb1 lt, r16, saltoMenor
+				
+							;sino ejecutamos
+	                        subu r27, r14, r11     ;efectua la resta			
+							addu r29, r29, r27	   ;incrementamos el acumulador 
+							addu r2, r2, 1         ;avanzamos a la siguiente posicion de Imagen1
+							addu r3, r3, 1	       ;avanzamos a la siguiente posicion de Imagen2 posicion			       
+							subu r6, r6, 1         ;decrementamos el tamaño MxN en una unidad				   
+							br bucleCom            ;provocamos el salto incondicional
+				
+				
+							;****************************************************************************
+				
+							;preguntamos si el elemento de la imagen1 es menor
+							;que elemento de la imagen2
+							;cmp r16, r14, r11 
+							;bb1 lt, r16, saltoMenor
+				
+	             saltoMenor: subu r27, r11, r14    ;efectuamos la resta invirtiendo el orden de los registros
+							 addu r29, r29, r27    ;icrementoamos el acumulador
+				 
+							 addu r2, r2, 1	      ;avanzamos a la siguiente posicion de Imagen1	
+							 addu r3, r3, 1       ;avanzamos a la siguiente posicion de Imagen2
+							 subu r6, r6, 1       ;decrementamos el tamaño MxN en una unidad	
+						     br bucleCom          ;provocamos el salto incondicional
+					
+							;****************************************************************************
+	
+	             sonIguales: subu r27, r14, r11   ; efectuamos la resta
+							 addu r29, r29, r27   ;icrementoamos el acumulador
+				 
+							 addu r2, r2, 1	      ;avanzamos a la siguiente posicion de Imagen1	
+							 addu r3, r3, 1	      ;avanzamos a la siguiente posicion de Imagen2
+							 subu r6, r6, 1       ;decrementamos el tamaño MxN en una unidad
+							 br bucleCom          ;provocamos el salto incondicional
+		
+		        	salir:	POP(r1)
+				    jmp(r1)
+									
+				
+							
+                         
+                         
+                         
+                         
+                         
+                
